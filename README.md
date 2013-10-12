@@ -1,4 +1,5 @@
 mCuRT
 =====
 
-an educational operating system developed by the famous Taiwan hacker, Jserv. I fork this project to practice my system programming skills.
+Originally an educational operating system developed by the famous Taiwan hacker, Jserv.
+I fork his project to practice my system programming skills.
