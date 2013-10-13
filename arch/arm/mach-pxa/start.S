@@ -73,27 +73,7 @@ fiq_handler:
 	b loop
 
 reset_handler:
-	bl set_misc
-
-	bl mask_off_int_reg
-
-	bl init_clock_reg
-
-	bl set_core_clock
-
-	bl set_os_timer
-
-	bl init_gpio
-
-	bl init_mem_ctrl
-
-	bl set_stack_pointer
-
-	bl set_svc_mode
-	
-	bl relocate
-	
-	bl jump_to_main
+	b set_misc
 					
 set_misc:		
         ldr r0, =0x2001			/* Allows access to all coprocessors */
@@ -118,8 +98,6 @@ set_misc:
 
         mvn    r0, #0                   /* grant manager access to all domains */
         mcr    p15,0,r0,c3,c0,0
-
-
         /*
          * Initializing PXA250 interrupt controller.
          */
