@@ -29,9 +29,13 @@
  * Usage: cpu_sr = save_cpu_sr(); 
  */
 save_cpu_sr:
+	/* read current cpsr */
 	mrs r0, CPSR
+	/* with irq & fiq disabled status */
 	orr r1, r0, #NO_INT
+	/* write back to cpsr's control bits */
 	msr CPSR_c, r1
+	/* equal to: "mov pc, lr", go back to caller */
 	bx lr
 
 	
@@ -139,8 +143,7 @@ restore_context:
  * @retval
  */
 context_switch:
-	stmfd sp!, {lr}			// save current thread's context
-        stmfd sp!, {lr}
+        stmfd sp!, {lr}			// save current thread's context
         stmfd sp!, {r0-r12, lr}
         mrs r4, SPSR
         stmfd sp!, {r4}

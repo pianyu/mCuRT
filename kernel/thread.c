@@ -54,6 +54,9 @@ tid_t thread_create(thread_struct *thread,
 	pthread->delayed_time = 0;
 	pthread->state = READY;
 
+	/**
+	    since thread_create() might be called after OS running,
+	    some thread management datastructure sould be protected, here use irq & fiq disabled */
 	cpu_sr = save_cpu_sr();
 	thread_table[tid] = pthread;
 	prio_exist_flag[prio] = true;
