@@ -202,8 +202,6 @@ static void hello_world(void *pdata)
 		count++;
 		sem_post(&sem);
 
-		thread_delay(1);
-
 		sem_pend(&sem);
 		count++;
 		t = count;
