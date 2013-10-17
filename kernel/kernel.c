@@ -121,6 +121,33 @@ void init_curt()
 			NULL);
 }
 
+/* select the next thread in the ready list with top_prio
+ */
+static void select_next_thread(int top_prio)
+{
+	list_node_t *pnode;
+	/* otherwise, threads in a ready state, then run the highest
+	 * priority one. */
+	pnode = delete_front_list(&ready_list[top_prio]);
+	if (is_empty_list(&ready_list[top_prio]))
+		prio_exist_flag[top_prio] = false;
+	next_thread = entry_list(pnode, thread_struct, node);
+	next_thread->state = RUNNING;
+	next_thread->time_quantum = TIME_QUANTUM;
+}
+
+/* let current thread to be in ready list */
+static void put_current_ready()
+{
+	/* Ready to change the status of the currently executing thread */
+	current_thread->state = READY;
+	/* insert this ready thread to the last one in its priority,
+	   it means CuRT use priority round-robin scheduling polcy,
+	   we can mark this line to get FIFO policy */
+	insert_back_list(&ready_list[current_thread->prio],
+			&current_thread->node);
+	prio_exist_flag[current_thread->prio] = true;
+}
 
 /**
  * @brief Invoke the scheduler
@@ -132,7 +159,6 @@ void schedule(SCHED_TYPE sched_type)
 {
 	int top_prio;
 	cpu_sr_t cpu_sr;
-	list_node_t *pnode;
 
 	cpu_sr = save_cpu_sr();
 	top_prio = get_top_prio();
@@ -145,21 +171,10 @@ void schedule(SCHED_TYPE sched_type)
 			restore_cpu_sr(cpu_sr);
 			return;
 		}
-		/* otherwise, threads in a ready state, then run the highest
-		 * priority one. */
-		pnode = delete_front_list(&ready_list[top_prio]);
-		if (is_empty_list(&ready_list[top_prio]))
-			prio_exist_flag[top_prio] = false;
-		next_thread = entry_list(pnode, thread_struct, node);
-		next_thread->state = RUNNING;
-		next_thread->time_quantum = TIME_QUANTUM;
 
-		/* Ready to change the status of the currently executing thread */
-		current_thread->state = READY;
-		insert_back_list(&ready_list[current_thread->prio],
-		                 &current_thread->node);
-		prio_exist_flag[current_thread->prio] = true;
-		total_csw_cnt++;
+		select_next_thread(top_prio);
+		put_current_ready();
+
 		/* actual context switching */
 		context_switch_in_interrupt();
 	}
@@ -173,26 +188,16 @@ void schedule(SCHED_TYPE sched_type)
 			restore_cpu_sr(cpu_sr);
 			return;
 		}
-		/* otherwise, threads in a ready state, then run the highest
-		 * priority one. */
-		pnode = delete_front_list(&ready_list[top_prio]);
-		if (is_empty_list(&ready_list[top_prio]))
-			prio_exist_flag[top_prio] = false;
-		next_thread = entry_list(pnode, thread_struct, node);
-		next_thread->state = RUNNING;
-		next_thread->time_quantum = TIME_QUANTUM;
 
-		/* Ready to change the status of the currently executing thread */
+		select_next_thread(top_prio);
+
 		if (current_thread->state == RUNNING) {
-			current_thread->state = READY;
-			insert_back_list(&ready_list[current_thread->prio],
-			                 &current_thread->node);
-			prio_exist_flag[current_thread->prio] = true;
+			put_current_ready();
 		}
-		total_csw_cnt++;
 		/* context switching */
 		context_switch();
 	}
+	total_csw_cnt++;
 	restore_cpu_sr(cpu_sr);
 }
 
@@ -274,6 +279,7 @@ void idle_thread_func(void *data)
 
 	while (1) {
 		cpu_sr = save_cpu_sr();
+		/* check if there is any terminated thread to be recycled */
 		if (!is_empty_list(&termination_wait_list)) {
 			pnode = delete_front_list(&termination_wait_list);
 			pthread = entry_list(pnode, thread_struct, node);
