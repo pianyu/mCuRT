@@ -9,29 +9,37 @@
 #include "kernel/thread.h"
 #include "kernel/kernel.h"
 #include "kernel/sync.h"
+#include "kernel/block.h"
 #include "port.h"	/* inclusion specific to hardware */
 
 static thread_struct shell_thread, stat_thread, info_thread;
 static thread_struct hello_thread, hello2_thread;
+static thread_struct ramdisk_thread;
 
-static stk_t thread_stk[5][THREAD_STACK_SIZE - 1];
+static stk_t thread_stk[16][THREAD_STACK_SIZE - 1];
 
 static void shell_thread_func(void *pdata);
 static void print_statistics(void *pdata);
 static void print_thread_info(void *pdata);
 static inline void print_help_msg();
 static void hello_world(void *pdata);
+static void ramdisk_test(void *pdata);
 
 static tid_t shell_tid, stat_tid, info_tid;
 static tid_t hello_tid, hello2_tid;
+static tid_t ramdisk_tid;
 
 static sem_struct sem;
 
 extern void SerialInit();
 
+extern int ramdisk_init(void);
+extern struct block_device ramdisk_dev;
+
 int main()
 {
 	SerialInit();
+	ramdisk_init();
 	init_interrupt_control();
 	init_curt();
 
@@ -68,6 +76,13 @@ int main()
 			&thread_stk[4][THREAD_STACK_SIZE-1],
 			hello_world,
 			"hello2_thread",
+			21,
+			NULL);
+
+	ramdisk_tid = thread_create(&ramdisk_thread,
+			&thread_stk[5][THREAD_STACK_SIZE-1],
+			ramdisk_test,
+			"ramdisk_thread",
 			21,
 			NULL);
 
@@ -125,6 +140,10 @@ static void shell_thread_func(void *pdata)
 		else if (!strcmp(buf, "hello")) {
 			thread_resume(hello_tid);
 			thread_resume(hello2_tid);
+			thread_delay(1);
+		}
+		else if (!strcmp(buf, "ramdisk_test")) {
+			thread_resume(ramdisk_tid);
 			thread_delay(1);
 		}
 		else {
@@ -215,3 +234,17 @@ static void hello_world(void *pdata)
 	}
 }
 
+static void ramdisk_test(void *pdata)
+{
+	int i = 0;
+	unsigned char buf[64];
+
+	while (1) {
+		block_read(&ramdisk_dev, buf, 0, 64);
+		for (i = 0; i < 64; ++i) {
+			printf("%x ", buf[i]);
+		}
+
+		thread_suspend(current_thread->tid);
+	}
+}

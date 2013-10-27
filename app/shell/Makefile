@@ -37,6 +37,7 @@ HW_DEP_ASM_SRC = \
 
 HW_DEP_C_SRC = \
 	../../device/serial.c \
+	../../device/ramdisk.c \
 	../../lib/stdio.c \
 	../../arch/arm/mach-pxa/port.c
 
@@ -45,7 +46,8 @@ KERNEL_SRC = \
 	../../kernel/thread.c \
 	../../kernel/list.c   \
 	../../kernel/sync.c  \
-	../../kernel/ipc.c
+	../../kernel/ipc.c  \
+	../../kernel/block.c
 
 SHELL_OBJ = $(SHELL_SRC:.c=.o)
 HW_DEP_C_OBJ = $(HW_DEP_C_SRC:.c=.o)
